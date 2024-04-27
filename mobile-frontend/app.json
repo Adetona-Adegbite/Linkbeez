@@ -9,13 +9,15 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#fffffa"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Your app needs access to your photo library to load photos.",
+        "NSMicrophoneUsageDescription": "This app requires access to the microphone for recording audio."
+      }
     },
     "android": {
       "adaptiveIcon": {
