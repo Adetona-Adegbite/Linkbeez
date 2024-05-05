@@ -14,7 +14,7 @@ import Icon2 from "react-native-vector-icons/FontAwesome";
 import Home from "./screens/Home";
 import Explore from "./screens/Explore";
 import Inbox from "./screens/Inbox";
-import Profile from "./screens/Profile";
+import Profile from "./screens/SelfProfile";
 import { createStackNavigator } from "@react-navigation/stack";
 import SettingsPage from "./screens/Settings";
 import CreateScreen from "./screens/Create";
@@ -30,6 +30,9 @@ import PersonalInfoScreen from "./screens/Register1";
 import BioInfoScreen from "./screens/Register2";
 import SocialInfoScreen from "./screens/Register3";
 import EditProfileScreen from "./screens/EditProfile";
+import OthersProfile from "./screens/OthersProfile";
+import { PaperProvider } from "react-native-paper";
+import Results from "./screens/Results";
 const Tab = createBottomTabNavigator();
 
 const Stack = createStackNavigator();
@@ -97,7 +100,11 @@ function ProfilePage() {
 }
 function HomePage() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerTintColor: "white",
+      }}
+    >
       <Stack.Screen
         options={{ headerShown: false }}
         name="Main-Home"
@@ -133,6 +140,28 @@ function HomePage() {
         }}
         name="Saved"
         component={SavedScreen}
+      />
+      <Stack.Screen
+        options={{
+          headerBackTitle: "Back",
+          headerStyle: {
+            backgroundColor: "#08A87E",
+          },
+          headerTitle: "",
+        }}
+        name="OtherProfile"
+        component={OthersProfile}
+      />
+      <Stack.Screen
+        options={{
+          headerBackTitle: "Back",
+          headerStyle: {
+            backgroundColor: "#08A87E",
+          },
+          headerTitle: "",
+        }}
+        name="Results"
+        component={Results}
       />
     </Stack.Navigator>
   );
@@ -287,55 +316,57 @@ function App() {
 }
 export default function Main() {
   return (
-    <NavigationContainer>
-      <StatusBar animated={true} backgroundColor="#5856D6" />
+    <PaperProvider>
+      <NavigationContainer>
+        <StatusBar animated={true} backgroundColor="#5856D6" />
 
-      <Stack.Navigator>
-        <Stack.Screen
-          options={{ headerShown: false }}
-          name="main"
-          component={App}
-        />
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            headerTransparent: true,
-            headerTitle: "",
-          }}
-          name="register1"
-          component={PersonalInfoScreen}
-        />
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            headerTransparent: true,
-            headerTitle: "",
-            headerBackTitleStyle: { color: "black" },
-            headerTintColor: "black",
-            headerBackTitle: "back",
-          }}
-          name="register2"
-          component={BioInfoScreen}
-        />
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            headerTransparent: true,
-            headerTintColor: "black",
+        <Stack.Navigator>
+          <Stack.Screen
+            options={{ headerShown: false }}
+            name="main"
+            component={App}
+          />
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              headerTransparent: true,
+              headerTitle: "",
+            }}
+            name="register1"
+            component={PersonalInfoScreen}
+          />
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              headerTransparent: true,
+              headerTitle: "",
+              headerBackTitleStyle: { color: "black" },
+              headerTintColor: "black",
+              headerBackTitle: "back",
+            }}
+            name="register2"
+            component={BioInfoScreen}
+          />
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              headerTransparent: true,
+              headerTintColor: "black",
 
-            headerTitle: "",
-            headerBackTitleStyle: { color: "black" },
-            headerBackTitle: "back",
-          }}
-          name="register3"
-          component={SocialInfoScreen}
-        />
-        <Stack.Screen
-          options={{ headerShown: false }}
-          name="login"
-          component={LoginScreen}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+              headerTitle: "",
+              headerBackTitleStyle: { color: "black" },
+              headerBackTitle: "back",
+            }}
+            name="register3"
+            component={SocialInfoScreen}
+          />
+          <Stack.Screen
+            options={{ headerShown: false }}
+            name="login"
+            component={LoginScreen}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
   );
 }

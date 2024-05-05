@@ -21,6 +21,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function PostAd({ navigation }) {
   const [images, setImages] = useState([]);
   const [base64Images, setBase64Images] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState("Lagos, Nigeria");
+
   const [adName, setAdName] = useState("");
   const [description, setDescription] = useState("");
   const [jobCategory, setJobCategory] = useState("");
@@ -74,6 +76,7 @@ export default function PostAd({ navigation }) {
       formData.append("title", adName);
       formData.append("description", description);
       formData.append("category", jobCategory);
+      formData.append("location", selectedLocation);
       images.forEach((image) => {
         formData.append("images", {
           name: new Date() + image.fileName,
@@ -97,7 +100,7 @@ export default function PostAd({ navigation }) {
       // });
 
       const response = await fetch(
-        "http://172.20.10.2:5000/new-advertisement",
+        "http://172.20.10.4:5000/new-advertisement",
         {
           method: "POST",
           body: formData,
@@ -115,6 +118,7 @@ export default function PostAd({ navigation }) {
 
       const responseData = await response.json();
       console.log("Success:", responseData.data);
+      navigation.navigate("Main-Home");
     } catch (error) {
       console.error("Error:", error);
       Alert.alert("Error", error.message);
@@ -152,9 +156,44 @@ export default function PostAd({ navigation }) {
               itemStyle={{ fontSize: 16 }}
             >
               <Picker.Item label="Select Job Category" value="" />
-              <Picker.Item label="Category 1" value="category1" />
-              <Picker.Item label="Category 2" value="category2" />
-              <Picker.Item label="Category 3" value="category3" />
+              <Picker.Item label="Music Production" value="MusicProduction" />
+              <Picker.Item label="Songwriting" value="Songwriting" />
+              <Picker.Item label="Dancers" value="Dancers" />
+              <Picker.Item label="Photographers" value="Photographers" />
+              <Picker.Item label="Managers" value="Managers" />
+              <Picker.Item label="Musician" value="Musician" />
+              <Picker.Item
+                label="Mix and Mastering Engineers"
+                value="MixAndMasteringEngineers"
+              />
+              <Picker.Item label="Backup Artist" value="BackupArtist" />
+              <Picker.Item label="Arrangers" value="Arrangers" />
+              <Picker.Item label="Sound Setup" value="SoundSetup" />
+              <Picker.Item
+                label="Lighting Enginners"
+                value="LightingEngineers"
+              />
+              <Picker.Item label="Guitarist" value="Guitarist" />
+            </Picker>
+          </View>
+          <View style={styles.pickerContainer}>
+            <Text style={styles.label}>Location</Text>
+            <Picker
+              selectedValue={selectedLocation}
+              onValueChange={(itemValue, itemIndex) =>
+                setSelectedLocation(itemValue)
+              }
+              style={[styles.picker, { height: "10%" }]}
+              itemStyle={{ fontSize: 16 }}
+            >
+              <Picker.Item label="Lagos, Nigeria" value="Lagos" />
+              <Picker.Item label="Abuja, Nigeria" value="Abuja" />
+              <Picker.Item label="Kano, Nigeria" value="Kano" />
+              <Picker.Item label="Ibadan, Nigeria" value="Ibadan" />
+              <Picker.Item label="New York, USA" value="New York" />
+              <Picker.Item label="London, UK" value="London" />
+              <Picker.Item label="Sydney, Australia" value="Australia" />
+              {/* Add more Picker.Item components for other location options */}
             </Picker>
           </View>
           {/* <View style={styles.pickerContainer}>
@@ -223,7 +262,7 @@ const styles = StyleSheet.create({
   picker: {
     borderRadius: 20,
     width: "100%",
-    height: "15%",
+    height: "30%",
     justifyContent: "center",
     overflow: "hidden",
     marginBottom: 10,

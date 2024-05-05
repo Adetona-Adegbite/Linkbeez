@@ -18,7 +18,7 @@ import SmallButton from "../components/SmallButton";
 import PostCard from "../components/PostCard";
 import { useNavigation } from "@react-navigation/native";
 
-export default function Profile() {
+export default function SelfProfile() {
   const [userData, setUserData] = useState(null);
   const [posts, setPosts] = useState(0);
   const [error, setError] = useState(null);
@@ -50,7 +50,8 @@ export default function Profile() {
   const getUserData = async () => {
     try {
       const userId = await AsyncStorage.getItem("user-id");
-      const response = await fetch(`http://172.20.10.2:5000/user/${userId}`);
+      console.log(userId);
+      const response = await fetch(`http://172.20.10.4:5000/user/${userId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch user data");
       }

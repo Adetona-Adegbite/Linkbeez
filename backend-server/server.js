@@ -6,6 +6,7 @@ const pg = require("pg");
 const admin = require("firebase-admin");
 const serviceAccount = require("./confidential/linkbeez-f317f-firebase-adminsdk-7srxv-aa31bfd801.json");
 const multer = require("multer");
+const { log } = require("console");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -34,6 +35,7 @@ client.connect(function (err) {
 });
 
 app.post("/register", upload.single("profile_pic"), async (req, res) => {
+  console.log("Request sent");
   const {
     firstName,
     lastName,
@@ -135,7 +137,7 @@ app.post("/login", async (req, res) => {
 
 app.get("/user/:userId", async (req, res) => {
   const userId = req.params.userId;
-
+  console.log(userId);
   try {
     // Query to fetch user from the database by ID
     const query = `
@@ -208,29 +210,15 @@ app.put("/user/:userId", async (req, res) => {
 });
 
 app.post("/new-advertisement", upload.array("images"), async (req, res) => {
-  const { user_id, title, description, category } = req.body;
-  // console.log(req.bo?Sdy.images);
-  const images = req.files; // Uploaded images are stored in req.files
-  console.log(images);
+  console.log("sent");
+  const { user_id, title, description, category, location } = req.body;
+  const images = req.files;
+
   try {
-    // Insert advertisement details into advertisements table
-    const advertisementQuery = `
-      INSERT INTO advertisements (user_id, title, description, category)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id;
-    `;
-    const advertisementValues = [user_id, title, description, category];
-    const advertisementResult = await client.query(
-      advertisementQuery,
-      advertisementValues
-    );
-    const advertisementId = advertisementResult.rows[0].id;
-
     const bucket = admin.storage().bucket();
-
     const imageUrls = [];
 
-    // Upload each image to Firebase Storage and get the download URL
+    // Upload each image to Firebase Storage and get the signed URL
     for (const image of images) {
       const imageFileName = `${image.originalname}`;
       const file = bucket.file(imageFileName);
@@ -249,27 +237,38 @@ app.post("/new-advertisement", upload.array("images"), async (req, res) => {
       stream.on("finish", async () => {
         console.log("Image uploaded to Firebase");
 
-        // Get the public URL of the uploaded image
-        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${imageFileName}`;
-        imageUrls.push(imageUrl);
+        // Generate signed URL for the uploaded image
+        const signedUrl = await file.getSignedUrl({
+          action: "read",
+          expires: "03-25-2025", // Set expiration date/time for the signed URL
+        });
+
+        // Push the signed URL to the array
+        imageUrls.push(signedUrl[0]);
 
         // If all images are uploaded, insert advertisement data into PostgreSQL database
         if (imageUrls.length === images.length) {
           try {
             // Insert advertisement details into advertisements table
             const advertisementQuery = `
-              INSERT INTO advertisements (user_id, title, description, category)
-              VALUES ($1, $2, $3, $4)
+              INSERT INTO advertisements (user_id, title, description, category,location)
+              VALUES ($1, $2, $3, $4,$5)
               RETURNING id;
             `;
-            const advertisementValues = [user_id, title, description, category];
+            const advertisementValues = [
+              user_id,
+              title,
+              description,
+              category,
+              location,
+            ];
             const advertisementResult = await client.query(
               advertisementQuery,
               advertisementValues
             );
             const advertisementId = advertisementResult.rows[0].id;
 
-            // Insert image URLs into advertisement_images table
+            // Insert signed URLs into advertisement_images table
             for (const imageUrl of imageUrls) {
               const imageQuery = `
                 INSERT INTO advertisement_images (advertisement_id, image)
@@ -304,7 +303,68 @@ app.post("/new-advertisement", upload.array("images"), async (req, res) => {
       .json({ success: false, error: "Error uploading image to Firebase" });
   }
 });
+app.post("/advertisements", async (req, res) => {
+  console.log("sent");
+  try {
+    // Extracts the user ID, location, and category from the request body
+    const { userId, location, category } = req.body;
+    console.log(userId, location, category);
 
-app.listen(5000, () => {
-  console.log("Started");
+    // Base query to fetch advertisements except the one with the current user's ID
+    let query = `
+      SELECT 
+        a.*, 
+        u.first_name AS user_first_name,
+        u.last_name AS user_last_name,
+        u.profession AS profession,
+        u.profile_pic,
+        u.jobs_completed,
+        u.rating,
+        u.date_joined,
+        json_agg(json_build_object('image_id', ai.id, 'image_url', ai.image)) AS images
+      FROM 
+        advertisements a
+      LEFT JOIN 
+        advertisement_images ai ON a.id = ai.advertisement_id
+      LEFT JOIN
+        users u ON a.user_id = u.user_id
+      WHERE
+        a.user_id != $1
+    `;
+
+    // Array to hold query parameters
+    let queryParams = ["1"];
+
+    // If location is passed, add it to the query
+    if (location) {
+      query += ` AND a.location = $${queryParams.length + 1}`;
+      queryParams.push(location);
+    }
+
+    // If category is passed, add it to the query
+    if (category) {
+      query += ` AND a.category = $${queryParams.length + 1}`;
+      queryParams.push(category);
+    }
+
+    query += `
+      GROUP BY 
+        a.id, u.first_name, u.last_name, u.profession, u.profile_pic, u.jobs_completed, u.rating, u.date_joined;
+    `;
+
+    const result = await client.query(query, queryParams);
+
+    // Return the array of advertisement objects
+    res.status(200).json({ success: true, advertisements: result.rows });
+  } catch (error) {
+    console.error("Error fetching advertisements:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Error fetching advertisements" });
+  }
+});
+
+const port = process.env.port || 5000;
+app.listen(port, () => {
+  console.log(`Started on the port ${port}`);
 });

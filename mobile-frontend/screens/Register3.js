@@ -46,7 +46,7 @@ const SocialInfoScreen = ({ route }) => {
       data.facebook = facebook;
     }
     try {
-      const response = await fetch("http://172.20.10.2:5000/register", {
+      const response = await fetch("http://172.20.10.4:5000/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

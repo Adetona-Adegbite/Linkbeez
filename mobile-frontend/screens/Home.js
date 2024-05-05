@@ -9,6 +9,7 @@ import {
   Platform,
   FlatList,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
@@ -26,6 +27,7 @@ import RecentlyViewedCarousel from "../components/TwoPerViewCard";
 import { Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Menu, Searchbar } from "react-native-paper";
 
 const Home = () => {
   // useEffect(() => {
@@ -43,10 +45,19 @@ const Home = () => {
     Dimensions.get("window").width
   );
   const [data, setData] = useState([
-    [{ name: "Music Producers" }, { name: "Songwriters" }, { name: "Dancers" }],
-    [{ name: "Photographers" }, { name: "Managers" }, { name: "Musician" }],
+    [
+      { name: "Music Producers", icon: "headphones" },
+      { name: "Songwriters", icon: "microphone" },
+      { name: "Dancers", icon: "female" },
+    ],
+    [
+      { name: "Photographers", icon: "camera" },
+      { name: "Managers", icon: "briefcase" },
+      { name: "Musician", icon: "music" },
+    ],
     // Add more pages of data if needed
   ]);
+  const [advertisements, setAdvertisements] = useState([]);
   // const renderItem = ({ item }) => (
   //   <Grid style={{ paddingHorizontal: 20 }}>
   //     <Row size={50}>
@@ -100,17 +111,111 @@ const Home = () => {
     // Add more items as needed
   ];
   const navigation = useNavigation();
-
+  const [groupedAds, setGroupedAds] = useState({});
+  const [recentlyJoinedAds, setRecentlyJoinedAds] = useState([]);
+  const [topRatedAds, setTopRatedAds] = useState([]);
+  const [mostExperiencedAds, setMostExperiencedAds] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dataFecthed, setDataFetched] = useState(false);
+  const [dataGrouped, setDataGrouped] = useState(false);
+  const [loading, setLoading] = useState(false);
   function handleSearch() {
     if (searchQuery !== "") {
       navigation.navigate("Search Results", { query: searchQuery });
       setSearchQuery("");
     }
   }
+  useEffect(() => {
+    // Group advertisements by category
+    const groupAdsByCategory = () => {
+      const groupedAdsData = {};
+      advertisements.forEach((ad) => {
+        if (!groupedAdsData[ad.category]) {
+          groupedAdsData[ad.category] = [];
+        }
+        groupedAdsData[ad.category].push(ad);
+      });
+      setGroupedAds(groupedAdsData);
+      // console.log(groupedAdsData);
+    };
+
+    // Find recently joined ads
+    const findRecentlyJoinedAds = () => {
+      const sortedAds = [...advertisements].sort(
+        (a, b) => new Date(b.date_joined) - new Date(a.date_joined)
+      );
+      setRecentlyJoinedAds(sortedAds.slice(0, 10));
+    };
+
+    // Find top-rated ads
+    const findTopRatedAds = () => {
+      const ratedAds = advertisements
+        .filter((ad) => ad.rating !== null)
+        .sort((a, b) => b.rating - a.rating);
+      setTopRatedAds(ratedAds);
+      // console.log(ratedAds);
+    };
+
+    // Find most experienced ads
+    const findMostExperiencedAds = () => {
+      const experiencedAds = advertisements
+        .filter((ad) => ad.jobs_completed !== null)
+        .sort((a, b) => b.jobs_completed - a.jobs_completed);
+      setMostExperiencedAds(experiencedAds);
+    };
+    // console.log(dataFecthed);
+    // Call the functions to set state
+    if (dataFecthed) {
+      groupAdsByCategory();
+      findRecentlyJoinedAds();
+      findTopRatedAds();
+      findMostExperiencedAds();
+      setDataGrouped(true);
+      setLoading(false);
+    }
+  }, [advertisements, dataFecthed]);
+  const [selectedLocation, setSelectedLocation] = useState("Lagos");
+
+  useEffect(() => {
+    async function getAllAds() {
+      const userId = await AsyncStorage.getItem("user-id");
+      console.log(userId);
+      try {
+        setLoading(true);
+        const response = await fetch("http://172.20.10.4:5000/advertisements", {
+          method: "POST", // Specify the HTTP method
+          headers: {
+            "Content-Type": "application/json", // Specify the content type
+          },
+          body: JSON.stringify({ userId: userId, location: selectedLocation }), // Convert the body to JSON format
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch advertisements");
+        }
+        const data = await response.json();
+        setAdvertisements(data.advertisements);
+        setDataFetched(true);
+        // console.log("Done");
+      } catch (error) {
+        console.error("Error fetching advertisements:", error);
+        // Handle error if needed
+      }
+    }
+    getAllAds();
+  }, [selectedLocation]);
+  const [visible, setVisible] = useState(false);
+
+  const openMenu = () => setVisible(true);
+
+  const closeMenu = () => setVisible(false);
+
+  const handleLocationSelect = (location) => {
+    setSelectedLocation(location);
+    closeMenu();
+  };
   return (
     <>
-      {fontLoaded && (
+      {fontLoaded && !loading ? (
         <SafeAreaView
           contentContainerStyle={styles.pageContainer}
           style={styles.page}
@@ -125,21 +230,58 @@ const Home = () => {
             <View style={styles.address_favorites}>
               <View style={styles.location}>
                 <FontAwesome6 color="#08A87E" size={23} name="location-dot" />
-                <Text
-                  style={[
-                    styles.text,
-                    {
-                      marginLeft: 5,
-                      fontSize: 14,
-                      marginRight: 5,
-                      color: "#08A87E",
-                      fontWeight: "bold",
-                    },
-                  ]}
+                <Menu
+                  visible={visible}
+                  onDismiss={closeMenu}
+                  contentStyle={{
+                    backgroundColor: "#fffffa",
+                    position: "relative",
+                    top: "6%",
+                    borderBottomEndRadius: 10,
+                  }}
+                  anchor={
+                    <Text
+                      style={[
+                        styles.text,
+                        { color: "#08A87E", marginLeft: 5, marginRight: 3 },
+                      ]}
+                      onPress={openMenu}
+                    >
+                      {selectedLocation}
+                    </Text>
+                  }
                 >
-                  Lagos, Nigeria
-                </Text>
-                <AntDesign color="#08A87E" name="down" />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("Lagos")}
+                    title="Lagos"
+                  />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("Abuja")}
+                    title="Abuja"
+                  />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("Kano")}
+                    title="Kano"
+                  />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("Ibadan")}
+                    title="Ibadan"
+                  />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("New York")}
+                    title="New York"
+                  />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("London")}
+                    title="London"
+                  />
+                  <Menu.Item
+                    onPress={() => handleLocationSelect("Sydney")}
+                    title="Sydney"
+                  />
+                  {/* Add more Menu.Item components for other location options */}
+                </Menu>
+                <AntDesign onPress={openMenu} color="#08A87E" name="down" />
               </View>
               <AntDesign
                 onPress={() => {
@@ -149,8 +291,18 @@ const Home = () => {
                 name="hearto"
               />
             </View>
-            <View style={styles.search_box}>
-              <Icon
+            {/* <View style={styles.search_box}> */}
+            <Searchbar
+              placeholder="Search LinkBEEZ"
+              onChangeText={setSearchQuery}
+              style={styles.searchInputContainer}
+              placeholderTextColor={"rgba(0,0,0,0.1)"}
+              value={searchQuery}
+              keyboardType="web-search"
+              icon="magnify"
+              iconColor="#000"
+            />
+            {/* <Icon
                 style={{ marginRight: 12 }}
                 name="search"
                 size={20}
@@ -165,30 +317,39 @@ const Home = () => {
                   setSearchQuery(text);
                 }}
                 onSubmitEditing={handleSearch}
-              />
-            </View>
+              /> */}
+            {/* </View> */}
             <Grid style={{ paddingHorizontal: 20, marginTop: 20 }}>
-              {data.map((rowData, rowIndex) => (
-                <Row key={rowIndex} size={50}>
-                  {rowData.map((category, columnIndex) => (
-                    <Col key={columnIndex} style={styles.gridItem}>
-                      <View style={styles.category}>
-                        <Pressable
-                          onPress={() => {
-                            navigation.navigate("Category", {
-                              category: category,
-                            });
-                          }}
-                          style={{ flex: 1 }}
-                        >
-                          <Icon name="h" size={24} />
-                        </Pressable>
-                      </View>
-                      <Text style={styles.gridText}>{category.name}</Text>
-                    </Col>
-                  ))}
-                </Row>
-              ))}
+              {data &&
+                data.map((rowData, rowIndex) => (
+                  <Row key={rowIndex} size={50}>
+                    {rowData.map((category, columnIndex) => (
+                      <Col key={columnIndex} style={styles.gridItem}>
+                        <View style={styles.category}>
+                          <Pressable
+                            onPress={() => {
+                              navigation.navigate("Results", {
+                                category: category.name,
+                              });
+                            }}
+                            style={{
+                              flex: 1,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Icon
+                              color="#08A87E"
+                              name={category.icon}
+                              size={24}
+                            />
+                          </Pressable>
+                        </View>
+                        <Text style={styles.gridText}>{category.name}</Text>
+                      </Col>
+                    ))}
+                  </Row>
+                ))}
             </Grid>
             <Pressable
               style={{
@@ -234,18 +395,32 @@ const Home = () => {
                 showsHorizontalScrollIndicator={true}
                 contentContainerStyle={styles.carousel}
               >
-                {carouselItems.map((item) => (
-                  <AdsCard key={item.id} />
+                {advertisements.map((item) => (
+                  <AdsCard
+                    profile_pic={item.profile_pic}
+                    image={item.images[0].image_url}
+                    key={item.id}
+                    item={item}
+                  />
                 ))}
               </ScrollView>
             </View>
-            <RecentlyViewedCarousel title="Recently Viewed" />
-            <RecentlyViewedCarousel title="Most Popular in Music Production" />
-            <RecentlyViewedCarousel title="Most Popular in Live Performances" />
-            <RecentlyViewedCarousel title="Most Popular in Video Production" />
-            <RecentlyViewedCarousel title="Recently Joined" />
+            {/* <RecentlyViewedCarousel title="Recently Viewed" /> */}
+            {dataGrouped &&
+              Object.keys(groupedAds).map((category, index) => (
+                <RecentlyViewedCarousel
+                  key={index}
+                  data={groupedAds[category]}
+                  title={`Most Popular in ${category}`}
+                />
+              ))}
           </ScrollView>
         </SafeAreaView>
+      ) : (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#08A87E" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
       )}
     </>
   );
@@ -313,6 +488,11 @@ const styles = StyleSheet.create({
   },
   searchInputContainer: {
     flex: 1,
+    width: "80%",
+    alignSelf: "center",
+    backgroundColor: "#fffffa",
+    borderColor: "rgba(0,0,0,0.2)",
+    borderWidth: 1,
   },
   categoriesContainer: {
     justifyContent: "space-around",
@@ -321,7 +501,7 @@ const styles = StyleSheet.create({
   category: {
     borderRadius: 50,
     // borderWidth: 1,
-    backgroundColor: "#D9D9D9",
+    backgroundColor: "#fffffa",
     // borderColor: "black",
     height: "100%",
     width: "55%",
@@ -353,5 +533,16 @@ const styles = StyleSheet.create({
   },
   carousel: {
     flexDirection: "row",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#08A87E",
   },
 });
